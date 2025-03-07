@@ -17,3 +17,6 @@ HelloWorld/.vs
 /Bin/SymbolsFromPDB_Debug.exe
 /Bin/SymbolsFromPDB_Debug.pdb
 /Bin/SymbolsOffset.txt
+/Bin/dbghelp.dll
+/Bin/symsrv.dll
+/Bin/Symbols
