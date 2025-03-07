@@ -102,9 +102,9 @@ void PauseIfParentIsExplorer() {
 void help() {
 	Log(L"\r\n\r\n[!] Incorrect Usage!" << std::endl);
 #ifdef PDB_OFFSETS
-	Log(L"[+] Usage: kdmapper.exe [--DontUpdateOffset | --OffsetsPath \"FilePath\"][--free | --indPages][--PassAllocationPtr] driver" << std::endl); 
+	Log(L"[+] Usage: kdmapper.exe [--Name][--DontUpdateOffset | --OffsetsPath \"FilePath\"][--free | --indPages][--PassAllocationPtr] driver" << std::endl); 
 #else
-	Log(L"[+] Usage: kdmapper.exe [--free | --indPages][--PassAllocationPtr] driver" << std::endl);
+	Log(L"[+] Usage: kdmapper.exe [--Name][--free | --indPages][--PassAllocationPtr] driver" << std::endl);
 #endif
 	PauseIfParentIsExplorer();
 }
@@ -132,7 +132,14 @@ int wmain(const int argc, wchar_t** argv) {
 		return -1;
 	}
 #endif
-
+	int DriverNameIdx = paramExists(argc, argv, L"Name");
+	wchar_t* DriverName = NULL;
+	if (DriverNameIdx > 0)
+	{
+		DriverName = argv[DriverNameIdx + 1];
+		Log("[+] Drivere Name Is Set To: " << DriverName << "\n");
+	}
+	
 	bool free = paramExists(argc, argv, L"free") > 0;
 	bool indPagesMode = paramExists(argc, argv, L"indPages") > 0;
 	bool passAllocationPtr = paramExists(argc, argv, L"PassAllocationPtr") > 0;
@@ -198,7 +205,7 @@ int wmain(const int argc, wchar_t** argv) {
 	}
 
 	NTSTATUS exitCode = 0;
-	if (!kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), 0, 0, free, true, mode, passAllocationPtr, callbackExample, &exitCode)) {
+	if (!kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), 0, (ULONG64)DriverName, free, true, mode, passAllocationPtr, callbackExample, &exitCode)) {
 		Log(L"[-] Failed to map " << driver_path << std::endl);
 		intel_driver::Unload(iqvw64e_device_handle);
 		PauseIfParentIsExplorer();

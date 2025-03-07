@@ -3,12 +3,12 @@
 
 int main()
 {
-	if (system("\"\"%cd%\"\\Tools\\SymCheck.bat\"") != 0)
+	/*if (system("\"\"%cd%\"\\Tools\\SymCheck.bat\"") != 0)
 	{
 		printf("\nSymCheck.bat Hash Failed.\n\n");
 		system("pause");
 		return -1;
-	}
+	}*/
 
 	if(!GenerateOffsetFile())
 	{

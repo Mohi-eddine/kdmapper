@@ -47,7 +47,7 @@
 #endif
 
 #ifdef DEBUG
-#define SYM_FROM_PDB_EXE (PCSTR)"cd ..\\Bin\\ && SymbolsFromPDB_Debug.exe"
+#define SYM_FROM_PDB_EXE (PCSTR)"cd ..\\Bin\\ && SymbolsFromPDB_Debug_Pdb_Offsets.exe"
 #else
 #define SYM_FROM_PDB_EXE (PCSTR)"SymbolsFromPDB.exe"
 #endif

@@ -26,6 +26,6 @@ typedef struct _SYM_INFO_ARRAY
 
 typedef struct _SYMBOLS_DATA
 {
-	PCSTR PDBFileName;
+	PCWSTR FileName;
 	SYM_INFO_ARRAY SymbolsInfoArray;
 }SYMBOLS_DATA, *PSYMBOLS_DATA;

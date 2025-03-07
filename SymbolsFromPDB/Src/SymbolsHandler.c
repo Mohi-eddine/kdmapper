@@ -1,7 +1,134 @@
 #include "SymbolsHandler.h"
 
+///////////////////////////////////////////////////////////////////////////////
+//static var
+//
+static wchar_t SymbolsPath[MAX_PATH + 1] = { NULL };
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Functions 
+//
+
+BOOL SetSymbolsPath()
+{
+	size_t Len = GetModuleFileNameW(NULL, SymbolsPath, MAX_PATH + 1);
+	if (!Len)
+		return FALSE;
+
+	size_t Idx = Len;
+	do
+	{
+		if (SymbolsPath[Idx] != L'\\')
+			SymbolsPath[Idx] = NULL;
+		else
+			break;
+		Idx--;
+	} while (Idx);
+	wcscat_s(SymbolsPath, _countof(SymbolsPath), L"Symbols\\");
+	return TRUE;
+}
+
+BOOL InitSymServer(IN PCWCHAR StoragePath)
+{
+	if (!StoragePath)
+		return FALSE;
+
+	BOOL Result = FALSE;
+	PWCHAR Str1 = WStrConcat(L"cache*", StoragePath);
+	if (!Str1)
+		return FALSE;
+
+	PWCHAR _SearchPath = WStrConcat(Str1, L";SRV*http://msdl.microsoft.com/download/symbols");
+	free(Str1);
+
+	if (!_SearchPath)
+		return FALSE;
+
+	__try
+	{
+		Result = SymInitializeW(CURRENT_PROCESS, _SearchPath, FALSE);
+		if (!Result)
+		{
+			printf("[-] Failed to init symbols server. Error: %u\n", GetLastError());
+			__leave;
+		}
+		SymSetOptions(SYMOPT_EXACT_SYMBOLS | SYMOPT_DEBUG);
+	}
+	__finally
+	{
+		free(_SearchPath);
+	}
+	return Result;
+}
+
+BOOL SymbolCleanup()
+{
+	// Deinitialize DbgHelp 
+	BOOL bRet = SymCleanup(CURRENT_PROCESS);
+
+	if (!bRet)
+	{
+		Print(("Error: Sym Cleanup failed. Error code: %u \n"), GetLastError());
+	}
+	return bRet;
+}
+
+BOOL GetPdbFile(IN PCWCHAR TargetBinPath, OUT PWSTR OutPdbFilePath)
+{
+	if (!TargetBinPath || !OutPdbFilePath)
+	{
+		Print("GetPdbFile: Invalid params\n");
+		return FALSE;
+	}
+	SYMSRV_INDEX_INFOW Info;
+	Info.sizeofstruct = sizeof(SYMSRV_INDEX_INFOW);
+	BOOL Result = SymSrvGetFileIndexInfoW(TargetBinPath, &Info, 0);
+	if (!Result)
+	{
+		printf("[-] Failed to find binary info. Error: %u\n", GetLastError());
+		return FALSE;
+	}
+
+	PVOID Id;
+	DWORD IdType;
+	if (Info.guid.Data1 == 0 && Info.guid.Data2 == 0 && Info.guid.Data3 == 0)
+	{ // GUID is zeroed
+		Id = &Info.sig;
+		IdType = SSRVOPT_DWORDPTR;
+	}
+	else 
+	{
+		Id = &Info.guid;
+		IdType = SSRVOPT_GUIDPTR;
+	}
+
+	Result = SymFindFileInPathW(
+		CURRENT_PROCESS,
+		NULL,
+		Info.pdbfile,
+		Id,
+		Info.age,
+		0,
+		IdType,
+		OutPdbFilePath,
+		NULL,
+		NULL
+	);
+	return Result;
+}
+
 BOOLEAN GenerateOffsetFile()
 {
+	if (!SetSymbolsPath())
+	{
+		printf("[-] Failed To Set The Symbols Path.\n");
+		return FALSE;
+	}
+
+	if (!InitSymServer(SymbolsPath))
+		return FALSE;
+
 	SYM_INFO NtOsKernelFunctionsInfo[] = {
 		{NULL,"MmAllocateIndependentPagesEx",0,0 },
 		{NULL,"MmFreeIndependentPages",0,0 },
@@ -29,15 +156,24 @@ BOOLEAN GenerateOffsetFile()
 		{CIDLL_PATH		,CIFunctionsInfo			,Elements_Count(CIFunctionsInfo,SYM_INFO)			},
 	};
 
+	TCHAR PdbFilePath[MAX_PATH + 1] = { NULL };
 	for(int FunctionsInfoIdx = 0 ; FunctionsInfoIdx < Elements_Count(SymsData, SYMBOLS_DATA) ;++FunctionsInfoIdx)
 	{
 		printf("\n");
-		if (!InitKernelSymbolsList(SymsData[FunctionsInfoIdx].PDBFileName, &SymsData[FunctionsInfoIdx].SymbolsInfoArray))
+		if (!GetPdbFile(SymsData[FunctionsInfoIdx].FileName, PdbFilePath))
+		{
+			printf("Error: Failed To Get PDB File For: %ls.\n", SymsData[FunctionsInfoIdx].FileName);
+			SymbolCleanup();
+			return FALSE;
+		}
+		if (!InitKernelSymbolsList(PdbFilePath, &SymsData[FunctionsInfoIdx].SymbolsInfoArray))
 		{
 			printf("Error: Failed To Get One Or More Function Offset.\n");
+			SymbolCleanup();
 			return FALSE;
 		}
 	}
+	SymbolCleanup();
 
 	HANDLE FileHandle = CreateFile(SYM_OFFSETS_PATH, GENERIC_WRITE, FILE_SHARE_READ,
 		NULL, CREATE_ALWAYS, 0, NULL);
@@ -243,21 +379,9 @@ BOOLEAN InitKernelSymbolsList(
 		}
 	} while (0);
 
-	// Deinitialize DbgHelp 
-	bRet = SymCleanup(GetCurrentProcess());
-	if (!bRet)
-	{
-		printf("Error: Sym Cleanup failed. Error code: %u \n", GetLastError());
-		return 0;
-	}
 	// Complete 
 	return Result;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Functions 
-//
 
 BOOLEAN GetFileParams(IN
 	PATH_TYPE pFileName,
@@ -272,7 +396,7 @@ BOOLEAN GetFileParams(IN
 	}
 	
 	// Determine the extension of the file 
-	PATH_TYPE szFileExt[_MAX_EXT] = { 0 };
+	TCHAR szFileExt[_MAX_EXT] = { 0 };
 
 #ifdef UNICODE
 	_wsplitpath_s(pFileName, NULL, 0, NULL, 0, NULL, 0, szFileExt, _MAX_EXT);
