@@ -19,17 +19,17 @@
 
 
 #ifdef UNICODE
-#define NTOSKRNL_PATH		L"C:\\Windows\\System32\\ntoskrnl.exe"//L".\\Tools\\Symbols\\ntkrnlmp.pdb"
-#define WDFILTER_PATH		L"C:\\Windows\\System32\\drivers\\wd\\WdFilter.sys"//L".\\Tools\\Symbols\\WdFilter.pdb"
-#define CIDLL_PATH			L"C:\\Windows\\System32\\ci.dll"//L".\\Tools\\Symbols\\ci.pdb"
+#define NTOSKRNL_PATH		L"C:\\Windows\\System32\\ntoskrnl.exe"
+#define WDFILTER_PATH		L"C:\\Windows\\System32\\drivers\\wd\\WdFilter.sys"
+#define CIDLL_PATH			L"C:\\Windows\\System32\\ci.dll"
 
-#define SYM_OFFSETS_PATH		L"SymbolsOffset.txt"
+#define SYM_OFFSETS_PATH	L"SymbolsOffset.txt"
 
 #define PATH_TYPE			PCWSTR
 #else
-#define NTOSKRNL_PATH		"C:\\Windows\\System32\\ntoskrnl.exe"//L".\\Tools\\Symbols\\ntkrnlmp.pdb"
-#define WDFILTER_PATH		"C:\\Windows\\System32\\drivers\\wd\\WdFilter.sys"//L".\\Tools\\Symbols\\WdFilter.pdb"
-#define CIDLL_PATH			"C:\\Windows\\System32\\ci.dll"//L".\\Tools\\Symbols\\ci.pdb"
+#define NTOSKRNL_PATH		"C:\\Windows\\System32\\ntoskrnl.exe"
+#define WDFILTER_PATH		"C:\\Windows\\System32\\drivers\\wd\\WdFilter.sys"
+#define CIDLL_PATH			"C:\\Windows\\System32\\ci.dll"
 
 
 #define FUNCOFFSET_PATH		"SymbolsOffset.txt"

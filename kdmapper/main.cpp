@@ -137,7 +137,7 @@ int wmain(const int argc, wchar_t** argv) {
 	if (DriverNameIdx > 0)
 	{
 		DriverName = argv[DriverNameIdx + 1];
-		Log("[+] Drivere Name Is Set To: " << DriverName << "\n");
+		Log("[+] Driver Name Is Set To: " << DriverName << "\n");
 	}
 	
 	bool free = paramExists(argc, argv, L"free") > 0;

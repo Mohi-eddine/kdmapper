@@ -16,7 +16,7 @@ BOOL SetSymbolsPath()
 	if (!Len)
 		return FALSE;
 
-	size_t Idx = Len;
+	size_t Idx = Len - 1;
 	do
 	{
 		if (SymbolsPath[Idx] != L'\\')
@@ -25,6 +25,10 @@ BOOL SetSymbolsPath()
 			break;
 		Idx--;
 	} while (Idx);
+
+	if (!Idx)
+		return FALSE;
+
 	wcscat_s(SymbolsPath, _countof(SymbolsPath), L"Symbols\\");
 	return TRUE;
 }
@@ -39,7 +43,7 @@ BOOL InitSymServer(IN PCWCHAR StoragePath)
 	if (!Str1)
 		return FALSE;
 
-	PWCHAR _SearchPath = WStrConcat(Str1, L";SRV*http://msdl.microsoft.com/download/symbols");
+	PWCHAR _SearchPath = WStrConcat(Str1, L";SRV*https://msdl.microsoft.com/download/symbols");
 	free(Str1);
 
 	if (!_SearchPath)
@@ -127,7 +131,10 @@ BOOLEAN GenerateOffsetFile()
 	}
 
 	if (!InitSymServer(SymbolsPath))
+	{
+		printf("[-] Failed To Init Symbols Server.\n");
 		return FALSE;
+	}
 
 	SYM_INFO NtOsKernelFunctionsInfo[] = {
 		{NULL,"MmAllocateIndependentPagesEx",0,0 },
@@ -138,11 +145,11 @@ BOOLEAN GenerateOffsetFile()
 		//Keep Adding Here
 	};
 	
-	SYM_INFO WdFilterFunctionsInfo[] = {
-		{NULL,"MpBmDocOpenRules",0,0 },
-		{NULL,"MpFreeDriverInfoEx",0,0 },
-		//Keep Adding Here
-	};
+	//SYM_INFO WdFilterFunctionsInfo[] = {
+	//	{NULL,"MpBmDocOpenRules",0,0 },
+	//	{NULL,"MpFreeDriverInfoEx",0,0 },
+	//	//Keep Adding Here
+	//};
 
 	SYM_INFO CIFunctionsInfo[] = {
 		{NULL,"g_KernelHashBucketList",0,0 },
@@ -152,7 +159,7 @@ BOOLEAN GenerateOffsetFile()
 
 	SYMBOLS_DATA SymsData[] = {
 		{NTOSKRNL_PATH	,NtOsKernelFunctionsInfo	,Elements_Count(NtOsKernelFunctionsInfo,SYM_INFO)	},
-		{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
+		//{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
 		{CIDLL_PATH		,CIFunctionsInfo			,Elements_Count(CIFunctionsInfo,SYM_INFO)			},
 	};
 
@@ -266,31 +273,6 @@ BOOLEAN InitKernelSymbolsList(
 
 	BOOL bRet = FALSE;
 	BOOL Result = TRUE;
-
-	// Set options 
-	DWORD Options = SymGetOptions();
-
-	// SYMOPT_DEBUG option asks DbgHelp to print additional troubleshooting 
-	// messages to debug output - use the debugger's Debug Output window 
-	// to view the messages 
-
-	Options |= SYMOPT_DEBUG;
-	SymSetOptions(Options);
-
-	// Initialize DbgHelp and load symbols for all modules of the current process 
-
-	bRet = SymInitialize(
-		GetCurrentProcess(),  // Process handle of the current process 
-		NULL,                 // No user-defined search path -> use default 
-		FALSE                 // Do not load symbols for modules in the current process 
-	);
-
-	if (!bRet)
-	{
-		printf("Error: SymInitialize() failed. Error code: %u \n", GetLastError());
-		return 0;
-	}
-
 	do
 	{
 		// Determine the base address and the file size 
