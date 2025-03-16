@@ -501,6 +501,11 @@ bool intel_driver::MmFreeIndependentPages(HANDLE device_handle, uint64_t address
 	{
 #ifdef PDB_OFFSETS	
 		kernel_MmFreeIndependentPages = GetSymbolOffsetByName(SymbolsInfoArray, "MmFreeIndependentPages");
+		if (!kernel_MmFreeIndependentPages) {
+			Log(L"[!] Failed to find MmFreeIndependentPages" << std::endl);
+			return false;
+		}
+		kernel_MmFreeIndependentPages += intel_driver::ntoskrnlAddr;
 #else
 		kernel_MmFreeIndependentPages = intel_driver::FindPatternInSectionAtKernel(device_handle, "PAGE", intel_driver::ntoskrnlAddr,
 			(BYTE*)"\xBA\x00\x60\x00\x00\x48\x8B\xCB\xE8\x00\x00\x00\x00\x48\x8D\x8B\x00\xF0\xFF\xFF",
@@ -513,12 +518,11 @@ bool intel_driver::MmFreeIndependentPages(HANDLE device_handle, uint64_t address
 		kernel_MmFreeIndependentPages += 8;
 
 		kernel_MmFreeIndependentPages = (uint64_t)ResolveRelativeAddress(device_handle, (PVOID)kernel_MmFreeIndependentPages, 1, 5);
-#endif
 		if (!kernel_MmFreeIndependentPages) {
 			Log(L"[!] Failed to find MmFreeIndependentPages" << std::endl);
 			return false;
 		}
-		kernel_MmFreeIndependentPages += intel_driver::ntoskrnlAddr;
+#endif
 	}
 
 	uint64_t result{};
