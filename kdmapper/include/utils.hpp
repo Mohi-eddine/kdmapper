@@ -2,8 +2,10 @@
 
 #if defined(DISABLE_OUTPUT)
 	#define Log(content) 
+	#define Print(...)
 #else
 	#define Log(content) std::wcout << content
+	#define Print(...) printf(__VA_ARGS__)
 #endif
 
 

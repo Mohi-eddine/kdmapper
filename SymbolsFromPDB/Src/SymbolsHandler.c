@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //static var
 //
-static wchar_t SymbolsPath[MAX_PATH + 1] = { NULL };
+static wchar_t SymbolsPath[MAX_PATH + 1] = { 0 };
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -20,7 +20,7 @@ BOOL SetSymbolsPath()
 	do
 	{
 		if (SymbolsPath[Idx] != L'\\')
-			SymbolsPath[Idx] = NULL;
+			SymbolsPath[Idx] = 0;
 		else
 			break;
 		Idx--;
@@ -145,11 +145,11 @@ BOOLEAN GenerateOffsetFile()
 		//Keep Adding Here
 	};
 	
-	//SYM_INFO WdFilterFunctionsInfo[] = {
-	//	{NULL,"MpBmDocOpenRules",0,0 },
-	//	{NULL,"MpFreeDriverInfoEx",0,0 },
-	//	//Keep Adding Here
-	//};
+	SYM_INFO WdFilterFunctionsInfo[] = {
+		{NULL,"MpBmDocOpenRules",0,0 },
+		{NULL,"MpFreeDriverInfoEx",0,0 },
+		//Keep Adding Here
+	};
 
 	SYM_INFO CIFunctionsInfo[] = {
 		{NULL,"g_KernelHashBucketList",0,0 },
@@ -159,11 +159,11 @@ BOOLEAN GenerateOffsetFile()
 
 	SYMBOLS_DATA SymsData[] = {
 		{NTOSKRNL_PATH	,NtOsKernelFunctionsInfo	,Elements_Count(NtOsKernelFunctionsInfo,SYM_INFO)	},
-		//{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
+		{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
 		{CIDLL_PATH		,CIFunctionsInfo			,Elements_Count(CIFunctionsInfo,SYM_INFO)			},
 	};
 
-	TCHAR PdbFilePath[MAX_PATH + 1] = { NULL };
+	TCHAR PdbFilePath[MAX_PATH + 1] = { 0 };
 	for(int FunctionsInfoIdx = 0 ; FunctionsInfoIdx < Elements_Count(SymsData, SYMBOLS_DATA) ;++FunctionsInfoIdx)
 	{
 		printf("\n");
@@ -187,7 +187,7 @@ BOOLEAN GenerateOffsetFile()
 
 	if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE)
 	{
-		printf("Error: Failed To Create Symbols Offset FileHandle.\n");
+		printf("Error: Failed To Create Symbols Offset FileHandle: %u.\n",GetLastError());
 		return FALSE;
 	}
 
@@ -195,7 +195,7 @@ BOOLEAN GenerateOffsetFile()
 	SIZE_T OffsetSize = 2 + sizeof(SymsData->SymbolsInfoArray.SymbolsArray->SymbolOffset) * 2;
 
 	SIZE_T BufferSize = 0;
-	DWORD BufferOffset = 0;
+	SIZE_T BufferOffset = 0;
 
 	for (int FunctionsInfoIdx = 0; FunctionsInfoIdx < Elements_Count(SymsData, SYMBOLS_DATA); ++FunctionsInfoIdx)
 	{
@@ -245,7 +245,7 @@ BOOLEAN GenerateOffsetFile()
 	BOOL IsWritten = WriteFile(
 		FileHandle,
 		Buffer,
-		BufferSize,
+		(DWORD)BufferSize,
 		NULL,
 		NULL);
 
@@ -299,7 +299,7 @@ BOOLEAN InitKernelSymbolsList(
 			BaseAddr,            // Base address of the module (cannot be NULL if .PDB file is used, otherwise it can be NULL) 
 			FileSize,            // Size of the file (cannot be NULL if .PDB file is used, otherwise it can be NULL) 
 			NULL,
-			NULL
+			0
 		);
 #else
 		printf("-> Loading Symbols From %s ... \n",pFileName);
@@ -327,7 +327,7 @@ BOOLEAN InitKernelSymbolsList(
 		ShowSymbolInfo(ModBase);
 #endif
 
-		SYMBOL_INFO_PACKAGE SymInfoPackage = { NULL };
+		SYMBOL_INFO_PACKAGE SymInfoPackage = { 0 };
 		SymInfoPackage.si.SizeOfStruct = sizeof(SYMBOL_INFO);
 		SymInfoPackage.si.MaxNameLen = sizeof(SymInfoPackage.name);//MAX_SYM_NAME + 1;
 		// space for the name of the symbol 

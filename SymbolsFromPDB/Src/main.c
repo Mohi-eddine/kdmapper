@@ -10,6 +10,7 @@ int main()
 		return -1;
 	}*/
 
+
 	if(!GenerateOffsetFile())
 	{
 		system("pause");

@@ -143,7 +143,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Pdb_Offset|x64'">
     <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <TargetName>$(ProjectName)</TargetName>
+    <TargetName>Loader</TargetName>
     <OutDir>$(SolutionDir)Bin\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -167,7 +167,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <AdditionalOptions>/D "DEBUG" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "DEBUG" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -185,7 +186,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <AdditionalOptions>/D "DEBUG"  /D "PDB_OFFSETS" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "DEBUG"  /D "PDB_OFFSETS" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -204,7 +206,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <TreatWarningAsError>false</TreatWarningAsError>
       <PreprocessorDefinitions>KDLIBMODE;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/D "DEBUG" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "DEBUG" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -225,6 +228,8 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions> /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -247,9 +252,10 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/D "PDB_OFFSETS" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "PDB_OFFSETS" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
       <CallingConvention>StdCall</CallingConvention>
       <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -273,6 +279,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>KDLIBMODE;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions> /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -296,7 +304,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>KDLIBMODE;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/D "PDB_OFFSETS" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "PDB_OFFSETS" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -309,11 +318,17 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="include\Prime\GInt.c" />
+    <ClCompile Include="include\Prime\Prime.c" />
+    <ClCompile Include="include\Prime\RSA.c" />
     <ClCompile Include="intel_driver.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="kdmapper.cpp" />
     <ClCompile Include="portable_executable.cpp" />
+    <ClCompile Include="ProcComm.c" />
     <ClCompile Include="service.cpp" />
+    <ClCompile Include="Sha256_SIMD.c" />
+    <ClCompile Include="SimpleEncryption.c" />
     <ClCompile Include="SymbolsHandler.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
@@ -324,7 +339,13 @@
     <ClInclude Include="include\kdmapper.hpp" />
     <ClInclude Include="include\nt.hpp" />
     <ClInclude Include="include\portable_executable.hpp" />
+    <ClInclude Include="include\Prime\GInt.h" />
+    <ClInclude Include="include\Prime\Prime.h" />
+    <ClInclude Include="include\Prime\RSA.h" />
+    <ClInclude Include="include\ProcComm.h" />
     <ClInclude Include="include\service.hpp" />
+    <ClInclude Include="include\Sha256_SIMD.h" />
+    <ClInclude Include="include\SimpleEncryption.h" />
     <ClInclude Include="include\SymbolsHandler.hpp" />
     <ClInclude Include="include\utils.hpp" />
   </ItemGroup>

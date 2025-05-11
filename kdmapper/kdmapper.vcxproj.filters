@@ -8,6 +8,12 @@
     <ClCompile Include="service.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="SymbolsHandler.cpp" />
+    <ClCompile Include="Sha256_SIMD.c" />
+    <ClCompile Include="SimpleEncryption.c" />
+    <ClCompile Include="include\Prime\GInt.c" />
+    <ClCompile Include="include\Prime\Prime.c" />
+    <ClCompile Include="include\Prime\RSA.c" />
+    <ClCompile Include="ProcComm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\utils.hpp">
@@ -33,6 +39,12 @@
     </ClInclude>
     <ClInclude Include="include\SymbolsHandler.hpp" />
     <ClInclude Include="include\DataStructs.hpp" />
+    <ClInclude Include="include\SimpleEncryption.h" />
+    <ClInclude Include="include\Sha256_SIMD.h" />
+    <ClInclude Include="include\ProcComm.h" />
+    <ClInclude Include="include\Prime\GInt.h" />
+    <ClInclude Include="include\Prime\Prime.h" />
+    <ClInclude Include="include\Prime\RSA.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
