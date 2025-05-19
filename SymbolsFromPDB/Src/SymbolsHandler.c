@@ -122,8 +122,40 @@ BOOL GetPdbFile(IN PCWCHAR TargetBinPath, OUT PWSTR OutPdbFilePath)
 	return Result;
 }
 
+BOOLEAN CheckSymServerDlls()
+{
+	static const WCHAR* DBGHELP_DLL_PATH = L"dbghelp.dll";
+	static const WCHAR* SYMSRV_DLL_PATH = L"symsrv.dll";
+	TCHAR DirBuff[MAX_PATH];
+	if (!GetCurrentDirectory(_countof(DirBuff), DirBuff))
+	{
+		printf("[-] Error: Invalid Directory.\n");
+		return FALSE;
+	}
+	HANDLE hFile = CreateFileW(L"dbghelp.dll", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (!hFile || hFile == INVALID_HANDLE_VALUE)
+	{
+		printf("[-] Error: %ls is not found in (%ls).\n", DBGHELP_DLL_PATH, DirBuff);
+		return FALSE;
+	}
+	CloseHandle(hFile);
+	hFile = CreateFileW(SYMSRV_DLL_PATH, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (!hFile || hFile == INVALID_HANDLE_VALUE)
+	{
+		printf("[-] Error: %ls is not found in (%ls).\n", SYMSRV_DLL_PATH, DirBuff);
+		return FALSE;
+	}
+	CloseHandle(hFile);
+	return TRUE;
+}
+
 BOOLEAN GenerateOffsetFile()
 {
+	if (!CheckSymServerDlls())
+	{
+		return FALSE;
+	}
+
 	if (!SetSymbolsPath())
 	{
 		printf("[-] Failed To Set The Symbols Path.\n");
