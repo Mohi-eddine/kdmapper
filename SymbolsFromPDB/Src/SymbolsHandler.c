@@ -177,11 +177,11 @@ BOOLEAN GenerateOffsetFile()
 		//Keep Adding Here
 	};
 	
-	SYM_INFO WdFilterFunctionsInfo[] = {
-		{NULL,"MpBmDocOpenRules",0,0 },
-		{NULL,"MpFreeDriverInfoEx",0,0 },
-		//Keep Adding Here
-	};
+	//SYM_INFO WdFilterFunctionsInfo[] = {
+	//	{NULL,"MpBmDocOpenRules",0,0 },
+	//	{NULL,"MpFreeDriverInfoEx",0,0 },
+	//	//Keep Adding Here
+	//};
 
 	SYM_INFO CIFunctionsInfo[] = {
 		{NULL,"g_KernelHashBucketList",0,0 },
@@ -191,7 +191,7 @@ BOOLEAN GenerateOffsetFile()
 
 	SYMBOLS_DATA SymsData[] = {
 		{NTOSKRNL_PATH	,NtOsKernelFunctionsInfo	,Elements_Count(NtOsKernelFunctionsInfo,SYM_INFO)	},
-		{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
+		//{WDFILTER_PATH	,WdFilterFunctionsInfo		,Elements_Count(WdFilterFunctionsInfo,SYM_INFO)		},
 		{CIDLL_PATH		,CIFunctionsInfo			,Elements_Count(CIFunctionsInfo,SYM_INFO)			},
 	};
 
