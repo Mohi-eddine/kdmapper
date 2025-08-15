@@ -1,4 +1,10 @@
 #include "utils.hpp"
+#include <Windows.h>
+#include <iostream>
+#include <vector>
+#include <fstream>
+
+#include "nt.hpp"
 
 std::wstring utils::GetFullTempPath() {
 	wchar_t temp_directory[MAX_PATH + 1] = { 0 };
@@ -13,7 +19,7 @@ std::wstring utils::GetFullTempPath() {
 	return std::wstring(temp_directory);
 }
 
-bool utils::ReadFileToMemory(const std::wstring& file_path, std::vector<uint8_t>* out_buffer) {
+bool utils::ReadFileToMemory(const std::wstring& file_path, std::vector<BYTE>* out_buffer) {
 	std::ifstream file_ifstream(file_path, std::ios::binary);
 
 	if (!file_ifstream)
@@ -110,4 +116,11 @@ PVOID utils::FindSection(const char* sectionName, uintptr_t modulePtr, PULONG si
 		}
 	}
 	return 0;
+}
+
+std::wstring utils::GetCurrentAppFolder() {
+	wchar_t buffer[1024];
+	GetModuleFileNameW(NULL, buffer, 1024);
+	std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+	return std::wstring(buffer).substr(0, pos);
 }

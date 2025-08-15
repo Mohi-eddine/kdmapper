@@ -1,6 +1,14 @@
-#include "kdmapper.hpp"
 
-void kdmapper::RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t delta) {
+#include "kdmapper.hpp"
+#include <Windows.h>
+#include <iostream>
+
+#include "utils.hpp"
+#include "intel_driver.hpp"
+#include "nt.hpp"
+#include "portable_executable.hpp"
+
+void RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t delta) {
 	for (const auto& current_reloc : relocs) {
 		for (auto i = 0u; i < current_reloc.count; ++i) {
 			const uint16_t type = current_reloc.item[i] >> 12;
@@ -13,7 +21,7 @@ void kdmapper::RelocateImageByDelta(portable_executable::vec_relocs relocs, cons
 }
 
 // Fix cookie by @Jerem584
-bool kdmapper::FixSecurityCookie(void* local_image, uint64_t kernel_image_base)
+bool FixSecurityCookie(void* local_image, uint64_t kernel_image_base)
 {
 	auto headers = portable_executable::GetNtHeaders(local_image);
 	if (!headers)
@@ -51,7 +59,7 @@ bool kdmapper::FixSecurityCookie(void* local_image, uint64_t kernel_image_base)
 	return true;
 }
 
-bool kdmapper::ResolveImports(HANDLE iqvw64e_device_handle, portable_executable::vec_imports imports) {
+bool ResolveImports(HANDLE iqvw64e_device_handle, portable_executable::vec_imports imports) {
 	for (const auto& current_import : imports) {
 		ULONG64 Module = utils::GetKernelModuleAddress(current_import.module_name);
 		if (!Module) {

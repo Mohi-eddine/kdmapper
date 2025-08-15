@@ -1,12 +1,16 @@
 #ifndef KDLIBMODE
 
-//#include <Windows.h>
+#include <Windows.h>
+#include <iostream>
 #include <string>
 #include <vector>
 #include <filesystem>
-
+#include <TlHelp32.h>
 
 #include "kdmapper.hpp"
+#include "utils.hpp"
+#include "intel_driver.hpp"
+
 #include "SimpleEncryption.h"
 #include "ProcComm.h"
 
