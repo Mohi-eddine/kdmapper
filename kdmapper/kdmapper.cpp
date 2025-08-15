@@ -1,188 +1,5 @@
 #include "kdmapper.hpp"
 
-uint64_t kdmapper::AllocIndependentPages(HANDLE device_handle, uint32_t size)
-{
-	const auto base = intel_driver::MmAllocateIndependentPagesEx(device_handle, size);
-	if (!base)
-	{
-		Log(L"[-] Error allocating independent pages" << std::endl);
-		return 0;
-	}
-
-	if (!intel_driver::MmSetPageProtection(device_handle, base, size, PAGE_EXECUTE_READWRITE))
-	{
-		Log(L"[-] Failed to change page protections" << std::endl);
-		intel_driver::MmFreeIndependentPages(device_handle, base, size);
-		return 0;
-	}
-
-	return base;
-}
-
-uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 param1, ULONG64 param2, bool free, bool destroyHeader, AllocationMode mode, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
-
-	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(data);
-
-	if (!nt_headers) {
-		Log(L"[-] Invalid format of PE image" << std::endl);
-		return 0;
-	}
-
-	if (nt_headers->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
-		Log(L"[-] Image is not 64 bit" << std::endl);
-		return 0;
-	}
-
-	uint32_t image_size = nt_headers->OptionalHeader.SizeOfImage;
-
-	void* local_image_base = VirtualAlloc(nullptr, image_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-	if (!local_image_base)
-		return 0;
-
-	DWORD TotalVirtualHeaderSize = (IMAGE_FIRST_SECTION(nt_headers))->VirtualAddress;
-	image_size = image_size - (destroyHeader ? TotalVirtualHeaderSize : 0);
-
-	uint64_t kernel_image_base = 0;
-	if (mode == AllocationMode::AllocateIndependentPages) {
-		kernel_image_base = AllocIndependentPages(iqvw64e_device_handle, image_size);
-	}
-	else { // AllocatePool by default
-		kernel_image_base = intel_driver::AllocatePool(iqvw64e_device_handle, nt::POOL_TYPE::NonPagedPool, image_size);
-	}
-
-	if (!kernel_image_base) {
-		Log(L"[-] Failed to allocate remote image in kernel" << std::endl);
-
-		VirtualFree(local_image_base, 0, MEM_RELEASE);
-		return 0;
-	}
-
-	do {
-		Log(L"[+] Image base has been allocated at 0x" << reinterpret_cast<void*>(kernel_image_base) << std::endl);
-
-		// Copy image headers
-
-		memcpy(local_image_base, data, nt_headers->OptionalHeader.SizeOfHeaders);
-
-		// Copy image sections
-
-		const PIMAGE_SECTION_HEADER current_image_section = IMAGE_FIRST_SECTION(nt_headers);
-
-		for (auto i = 0; i < nt_headers->FileHeader.NumberOfSections; ++i) {
-			if ((current_image_section[i].Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA) > 0)
-				continue;
-			auto local_section = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(local_image_base) + current_image_section[i].VirtualAddress);
-			memcpy(local_section, reinterpret_cast<void*>(reinterpret_cast<uint64_t>(data) + current_image_section[i].PointerToRawData), current_image_section[i].SizeOfRawData);
-		}
-
-		uint64_t realBase = kernel_image_base;
-		if (destroyHeader) {
-			kernel_image_base -= TotalVirtualHeaderSize;
-			Log(L"[+] Skipped 0x" << std::hex << TotalVirtualHeaderSize << L" bytes of PE Header" << std::endl);
-		}
-
-		// Resolve relocs and imports
-
-		RelocateImageByDelta(portable_executable::GetRelocs(local_image_base), kernel_image_base - nt_headers->OptionalHeader.ImageBase);
-
-		if (!FixSecurityCookie(local_image_base, kernel_image_base ))
-		{
-			Log(L"[-] Failed to fix cookie" << std::endl);
-			return 0;
-		}
-
-		if (!ResolveImports(iqvw64e_device_handle, portable_executable::GetImports(local_image_base))) {
-			Log(L"[-] Failed to resolve imports" << std::endl);
-			kernel_image_base = realBase;
-			break;
-		}
-
-		// Write fixed image to kernel
-
-		if (!intel_driver::WriteMemory(iqvw64e_device_handle, realBase, (PVOID)((uintptr_t)local_image_base + (destroyHeader ? TotalVirtualHeaderSize : 0)), image_size)) {
-			Log(L"[-] Failed to write local image to remote image" << std::endl);
-			kernel_image_base = realBase;
-			break;
-		}
-
-		// Call driver entry point
-
-		const uint64_t address_of_entry_point = kernel_image_base + nt_headers->OptionalHeader.AddressOfEntryPoint;
-
-		Log(L"[<] Calling DriverEntry 0x" << reinterpret_cast<void*>(address_of_entry_point) << std::endl);
-
-		if (callback) {
-			if (!callback(&param1, &param2, realBase, image_size)) {
-				Log(L"[-] Callback returns false, failed!" << std::endl);
-				kernel_image_base = realBase;
-				break;
-			}
-		}
-
-		NTSTATUS status = 0;
-		if (!intel_driver::CallKernelFunction(iqvw64e_device_handle, &status, address_of_entry_point, (PassAllocationAddressAsFirstParam ? realBase : param1), param2)) {
-			Log(L"[-] Failed to call driver entry" << std::endl);
-			kernel_image_base = realBase;
-			break;
-		}
-
-		if (exitCode)
-			*exitCode = status;
-
-		Log(L"[+] DriverEntry returned 0x" << std::hex << status << std::endl);
-
-		// Free memory
-		if (free) {
-			Log(L"[+] Freeing memory" << std::endl);
-			bool free_status = false;
-
-			if (mode == AllocationMode::AllocateIndependentPages)
-			{
-				free_status = intel_driver::MmFreeIndependentPages(iqvw64e_device_handle, realBase, image_size);
-			}
-			else {
-				free_status = intel_driver::FreePool(iqvw64e_device_handle, realBase);
-			}
-
-			if (free_status) {
-				Log(L"[+] Memory has been released" << std::endl);
-			}
-			else {
-				Log(L"[-] WARNING: Failed to free memory!" << std::endl);
-			}
-		}
-
-
-
-		VirtualFree(local_image_base, 0, MEM_RELEASE);
-		return realBase;
-
-	} while (false);
-
-
-	VirtualFree(local_image_base, 0, MEM_RELEASE);
-
-	Log(L"[+] Freeing memory" << std::endl);
-	bool free_status = false;
-
-	if (mode == AllocationMode::AllocateIndependentPages)
-	{
-		free_status = intel_driver::MmFreeIndependentPages(iqvw64e_device_handle, kernel_image_base, image_size);
-	}
-	else {
-		free_status = intel_driver::FreePool(iqvw64e_device_handle, kernel_image_base);
-	}
-
-	if (free_status) {
-		Log(L"[+] Memory has been released" << std::endl);
-	}
-	else {
-		Log(L"[-] WARNING: Failed to free memory!" << std::endl);
-	}
-
-	return 0;
-}
-
 void kdmapper::RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t delta) {
 	for (const auto& current_reloc : relocs) {
 		for (auto i = 0u; i < current_reloc.count; ++i) {
@@ -265,4 +82,219 @@ bool kdmapper::ResolveImports(HANDLE iqvw64e_device_handle, portable_executable:
 	}
 
 	return true;
+}
+
+uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 param1, ULONG64 param2, bool free, bool destroyHeader, AllocationMode mode, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
+
+	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(data);
+
+	if (!nt_headers) {
+		Log(L"[-] Invalid format of PE image" << std::endl);
+		return 0;
+	}
+
+	if (nt_headers->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+		Log(L"[-] Image is not 64 bit" << std::endl);
+		return 0;
+	}
+
+	uint32_t image_size = nt_headers->OptionalHeader.SizeOfImage;
+
+	void* local_image_base = VirtualAlloc(nullptr, image_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	if (!local_image_base)
+		return 0;
+
+	DWORD TotalVirtualHeaderSize = (IMAGE_FIRST_SECTION(nt_headers))->VirtualAddress;
+	image_size = image_size - (destroyHeader ? TotalVirtualHeaderSize : 0);
+
+	uint64_t kernel_image_base = 0;
+	if (mode == AllocationMode::AllocateIndependentPages) {
+		kernel_image_base = intel_driver::MmAllocateIndependentPagesEx(iqvw64e_device_handle, image_size);;
+	}
+	else { // AllocatePool by default
+		kernel_image_base = intel_driver::AllocatePool(iqvw64e_device_handle, nt::POOL_TYPE::NonPagedPool, image_size);
+	}
+
+	if (!kernel_image_base) {
+		Log(L"[-] Failed to allocate remote image in kernel" << std::endl);
+
+		VirtualFree(local_image_base, 0, MEM_RELEASE);
+		return 0;
+	}
+
+	do {
+		Log(L"[+] Image base has been allocated at 0x" << reinterpret_cast<void*>(kernel_image_base) << std::endl);
+
+		// Copy image headers
+
+		memcpy(local_image_base, data, nt_headers->OptionalHeader.SizeOfHeaders);
+
+		// Copy image sections
+
+		const PIMAGE_SECTION_HEADER current_image_section = IMAGE_FIRST_SECTION(nt_headers);
+
+		for (auto i = 0; i < nt_headers->FileHeader.NumberOfSections; ++i) {
+			if ((current_image_section[i].Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA) > 0)
+				continue;
+			auto local_section = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(local_image_base) + current_image_section[i].VirtualAddress);
+			memcpy(local_section, reinterpret_cast<void*>(reinterpret_cast<uint64_t>(data) + current_image_section[i].PointerToRawData), current_image_section[i].SizeOfRawData);
+		}
+
+		uint64_t realBase = kernel_image_base;
+		if (destroyHeader) {
+			kernel_image_base -= TotalVirtualHeaderSize;
+			Log(L"[+] Skipped 0x" << std::hex << TotalVirtualHeaderSize << L" bytes of PE Header" << std::endl);
+		}
+
+		// Resolve relocs and imports
+
+		RelocateImageByDelta(portable_executable::GetRelocs(local_image_base), kernel_image_base - nt_headers->OptionalHeader.ImageBase);
+
+		if (!FixSecurityCookie(local_image_base, kernel_image_base))
+		{
+			Log(L"[-] Failed to fix cookie" << std::endl);
+			return 0;
+		}
+
+		if (!ResolveImports(iqvw64e_device_handle, portable_executable::GetImports(local_image_base))) {
+			Log(L"[-] Failed to resolve imports" << std::endl);
+			kernel_image_base = realBase;
+			break;
+		}
+
+		// Write fixed image to kernel
+
+		if (!intel_driver::WriteMemory(iqvw64e_device_handle, realBase, (PVOID)((uintptr_t)local_image_base + (destroyHeader ? TotalVirtualHeaderSize : 0)), image_size)) {
+			Log(L"[-] Failed to write local image to remote image" << std::endl);
+			kernel_image_base = realBase;
+			break;
+		}
+
+		if (mode == AllocationMode::AllocateIndependentPages)
+		{
+			auto ProtectionToString = [](ULONG prot) -> const char* {
+				switch (prot)
+				{
+				case PAGE_NOACCESS: return "NOACCESS";
+				case PAGE_READONLY: return "READONLY";
+				case PAGE_READWRITE: return "READWRITE";
+				case PAGE_EXECUTE: return "EXECUTE";
+				case PAGE_EXECUTE_READ: return "EXECUTE_READ";
+				case PAGE_EXECUTE_READWRITE: return "EXECUTE_READWRITE";
+				default: return "UNKNOWN";
+				}
+				};
+
+			for (int i = 0; i < nt_headers->FileHeader.NumberOfSections; i++) {
+				auto sec = &IMAGE_FIRST_SECTION(nt_headers)[i];
+				uintptr_t secAddr = kernel_image_base + sec->VirtualAddress;
+				uint32_t secSize = sec->Misc.VirtualSize;
+
+				if (secSize <= 0) {
+					Log(L"[*] Skipping empty section: " << (char*)sec->Name << std::endl);
+					continue;
+				}
+
+				ULONG prot = PAGE_READONLY;
+
+				if (sec->Characteristics & IMAGE_SCN_MEM_EXECUTE) {
+					prot = (sec->Characteristics & IMAGE_SCN_MEM_WRITE) ?
+						PAGE_EXECUTE_READWRITE : PAGE_EXECUTE_READ;
+				}
+				else if (sec->Characteristics & IMAGE_SCN_MEM_WRITE) {
+					prot = PAGE_READWRITE;
+				}
+				else if (sec->Characteristics & IMAGE_SCN_MEM_READ) {
+					prot = PAGE_READONLY;
+				}
+
+				Log(L"[+] Setting protection for section: "
+					<< (char*)sec->Name
+					<< L" Base: 0x" << std::hex << secAddr
+					<< L" Size: 0x" << secSize
+					<< L" Prot: " << ProtectionToString(prot)
+					<< std::dec << std::endl);
+
+				if (!intel_driver::MmSetPageProtection(iqvw64e_device_handle, secAddr, secSize, prot)) {
+					Log(L"[-] Failed to set protection for section: " << (char*)sec->Name << std::endl);
+				}
+			}
+		}
+
+		// Call driver entry point
+
+		const uint64_t address_of_entry_point = kernel_image_base + nt_headers->OptionalHeader.AddressOfEntryPoint;
+
+		Log(L"[<] Calling DriverEntry 0x" << reinterpret_cast<void*>(address_of_entry_point) << std::endl);
+
+		if (callback) {
+			if (!callback(&param1, &param2, realBase, image_size)) {
+				Log(L"[-] Callback returns false, failed!" << std::endl);
+				kernel_image_base = realBase;
+				break;
+			}
+		}
+
+		NTSTATUS status = 0;
+		if (!intel_driver::CallKernelFunction(iqvw64e_device_handle, &status, address_of_entry_point, (PassAllocationAddressAsFirstParam ? realBase : param1), param2)) {
+			Log(L"[-] Failed to call driver entry" << std::endl);
+			kernel_image_base = realBase;
+			break;
+		}
+
+		if (exitCode)
+			*exitCode = status;
+
+		Log(L"[+] DriverEntry returned 0x" << std::hex << status << std::endl);
+
+		// Free memory
+		if (free) {
+			Log(L"[+] Freeing memory" << std::endl);
+			bool free_status = false;
+
+			if (mode == AllocationMode::AllocateIndependentPages)
+			{
+				free_status = intel_driver::MmFreeIndependentPages(iqvw64e_device_handle, realBase, image_size);
+			}
+			else {
+				free_status = intel_driver::FreePool(iqvw64e_device_handle, realBase);
+			}
+
+			if (free_status) {
+				Log(L"[+] Memory has been released" << std::endl);
+			}
+			else {
+				Log(L"[-] WARNING: Failed to free memory!" << std::endl);
+			}
+		}
+
+
+
+		VirtualFree(local_image_base, 0, MEM_RELEASE);
+		return realBase;
+
+	} while (false);
+
+
+	VirtualFree(local_image_base, 0, MEM_RELEASE);
+
+	Log(L"[+] Freeing memory" << std::endl);
+	bool free_status = false;
+
+	if (mode == AllocationMode::AllocateIndependentPages)
+	{
+		free_status = intel_driver::MmFreeIndependentPages(iqvw64e_device_handle, kernel_image_base, image_size);
+	}
+	else {
+		free_status = intel_driver::FreePool(iqvw64e_device_handle, kernel_image_base);
+	}
+
+	if (free_status) {
+		Log(L"[+] Memory has been released" << std::endl);
+	}
+	else {
+		Log(L"[-] WARNING: Failed to free memory!" << std::endl);
+	}
+
+	return 0;
 }
