@@ -1,7 +1,6 @@
 #include "SymbolsHandler.hpp"
 
 //for use in KDMapper
-
 #ifdef PDB_OFFSETS
 
 std::vector<SYM_INFO> SymbolsInfoArray{};
@@ -27,7 +26,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 {
 	if (!pSymInfoArray)
 	{
-		printf("[-] Error: SymInfoArray Ptr is NULL.\n");
+		Print("[-] Error: SymInfoArray Ptr is NULL.\n");
 		return FALSE;
 	}
 	pSymInfoArray->clear();
@@ -45,10 +44,10 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 	RetryGeneratingFile:
 		if (Failed || UpdateOffsetsFile)
 		{
-			printf("[+] Generating Default Offsets File\n");
+			Print("[+] Generating Default Offsets File\n");
 			if (system(SYM_FROM_PDB_EXE) != 0)
 			{
-				printf("[-] Failed To Generate Symbols Offset File.\n");
+				Print("[-] Failed To Generate Symbols Offset File.\n");
 				return FALSE;
 			}
 		}
@@ -63,19 +62,19 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 		{
 			if (SymbolsOffsetFilePath)
 			{
-				printf("[>] Warning: The Supplied File Path Is Invalid --> Switching To Default Offsets File.\n");
+				Print("[>] Warning: The Supplied File Path Is Invalid --> Switching To Default Offsets File.\n");
 				SymbolsOffsetFilePath = NULL;//Reset The Global Path Variable
 				goto TryDefault;
 			}
 			
-			printf("[>] Warning: Failed To Access Default Offsets File --> Default File Is Not Valid.\n");
+			Print("[>] Warning: Failed To Access Default Offsets File --> Default File Is Not Valid.\n");
 			Failed = true;	
 			goto RetryGeneratingFile;
 		}
 #ifdef UNICODE
-		printf(("[-] Failed To Open Offsets File: %ls.\n-> Error: %u \n"), SYM_OFFSETS_PATH, GetLastError());
+		Print(("[-] Failed To Open Offsets File: %ls.\n-> Error: %u \n"), SYM_OFFSETS_PATH, GetLastError());
 #else
-		printf(("[-] Failed To Open Offsets File: %s.\n-> Error: %u \n"), FUNCOFFSET_PATH, GetLastError());
+		Print(("[-] Failed To Open Offsets File: %s.\n-> Error: %u \n"), FUNCOFFSET_PATH, GetLastError());
 #endif
 		return FALSE;
 	}
@@ -83,7 +82,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 	DWORD FileSize = GetFileSize(hFile, NULL);
 	if (!FileSize)
 	{
-		printf("[-] Error: Offset File Is Empty.\n");
+		Print("[-] Error: Offset File Is Empty.\n");
 		CloseHandle(hFile);
 		return FALSE;
 	}
@@ -92,7 +91,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 	PCHAR Buffer = BufferLocalPtr.get();
 	if (!Buffer)
 	{
-		printf("[-] Error: Failed To Allocate Memory For Offsets File Buffer.\n");
+		Print("[-] Error: Failed To Allocate Memory For Offsets File Buffer.\n");
 		CloseHandle(hFile);
 		return FALSE;
 	}
@@ -101,7 +100,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 	CloseHandle(hFile);
 	if (!IsRead)
 	{
-		printf("[-] Error: Failed To Read Data From Offsets File.\n");
+		Print("[-] Error: Failed To Read Data From Offsets File.\n");
 		return FALSE;
 	}
 
@@ -117,7 +116,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 
 	if (!LinesCount)
 	{
-		printf("[-] Error: Failed To Get Lines Count In Offsets File.\n");
+		Print("[-] Error: Failed To Get Lines Count In Offsets File.\n");
 		return FALSE;
 	}
 
@@ -153,7 +152,7 @@ BOOL GetSymbolsInfoFromFile(OUT std::vector<SYM_INFO> *pSymInfoArray, IN OPTIONA
 		{
 			if (Count > MAX_SYM_NAME_LENGTH)
 			{
-				printf("Error: Max Symbol Length Exceeded.\n");
+				Print("Error: Max Symbol Length Exceeded.\n");
 				return FALSE;
 			}
 			++Count;
@@ -173,7 +172,7 @@ DWORD GetSymbolOffsetByHash(IN const std::vector<SYM_INFO>& SymInfoArray, IN DWO
 {
 	if (SymInfoArray.empty() || !SymHash)
 	{
-		printf("[-] Error: Invalid Parameter.\n");
+		Print("[-] Error: Invalid Parameter.\n");
 		return 0;
 	}
 

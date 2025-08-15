@@ -5,6 +5,15 @@
 
 #define SHARED_MEMORY_NAME L"Global\\CommMem"
 
+#ifndef Print
+#ifndef DEBUG
+#define Print(...)
+#else
+#define Print(...) printf(__VA_ARGS__)
+#endif
+#endif
+
+
 typedef struct _PROC_COMM_DATA
 {
     RSA_KEY PublicKey;

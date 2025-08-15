@@ -91,18 +91,18 @@ DWORD getParentProcess()
 //Help people that don't understand how to open a console
 void PauseIfParentIsExplorer() {
 #ifndef DEBUG
-	DWORD explorerPid = 0;
-	GetWindowThreadProcessId(GetShellWindow(), &explorerPid);
-	DWORD parentPid = getParentProcess();
-	if (parentPid == explorerPid) {
-		Log(L"[+] Pausing to allow for debugging" << std::endl);
-		Log(L"[+] Press enter to close" << std::endl);
-		std::cin.get();
-	}
-#else
-	Log(L"[+] Pausing to allow for debugging" << std::endl);
-	Log(L"[+] Press enter to close" << std::endl);
-	std::cin.get();
+//	DWORD explorerPid = 0;
+//	GetWindowThreadProcessId(GetShellWindow(), &explorerPid);
+//	DWORD parentPid = getParentProcess();
+//	if (parentPid == explorerPid) {
+//		Log(L"[+] Pausing to allow for debugging" << std::endl);
+//		Log(L"[+] Press enter to close" << std::endl);
+//		std::cin.get();
+//	}
+//#else
+//	Log(L"[+] Pausing to allow for debugging" << std::endl);
+//	Log(L"[+] Press enter to close" << std::endl);
+//	std::cin.get();
 #endif
 }
 
@@ -207,7 +207,7 @@ bool GetEncryptionKey(const int argc, wchar_t** argv, __m128i Key[2])
 			}
 			KeyHash = KeyGenerator(argv[PwdParamIdx + 1], PasswordSize, Key);
 			Print("\n====================================================\n");
-			printf("[+] -> Key: 256Bit.\n[+] -> KeyHash(Crc32): 0x%X\n", KeyHash);
+			Print("[+] -> Key: 256Bit.\n[+] -> KeyHash(Crc32): 0x%X\n", KeyHash);
 			Print("====================================================\n\n");
 			Result = KeyHash != 0;
 		}
@@ -274,7 +274,7 @@ int wmain(const int argc, wchar_t** argv) {
 	__m128i Key[2];
 	if (ChildProcCommStart(&hMapFile, &ProcData))
 	{
-		printf("[+] Started From Parent Proc\n");
+		Print("[+] Started From Parent Proc\n");
 		RSA_KEY PublicKey = { 0 };
 		if(ggint_is_zero(ProcData->PublicKey.mod) && ggint_is_zero(ProcData->PublicKey.exp))
 		{
@@ -308,7 +308,7 @@ int wmain(const int argc, wchar_t** argv) {
 		DWORD KeyHash = KeyGenerator((wchar_t*)DecryptedData, PasswordSize, Key);
 		ggint_zero(DecryptedData);
 		Print("\n====================================================\n");
-		printf("[+] -> Key: 256Bit.\n[+] -> KeyHash(Crc32): 0x%X\n", KeyHash);
+		Print("[+] -> Key: 256Bit.\n[+] -> KeyHash(Crc32): 0x%X\n", KeyHash);
 		Print("====================================================\n\n");
 		if (!KeyHash)
 		{
@@ -318,7 +318,7 @@ int wmain(const int argc, wchar_t** argv) {
 	}
 	else
 	{
-		printf("[+] Normal Exec\n");
+		Print("[+] Normal Exec\n");
 
 	}
 	
@@ -458,7 +458,15 @@ int wmain(const int argc, wchar_t** argv) {
 	}
 
 	NTSTATUS exitCode = 0;
-	if (!kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), 0, (ULONG64)DriverName, free, true, mode, passAllocationPtr, callbackExample, &exitCode)) {
+	bool IsMapped = kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), 0, (ULONG64)DriverName, free, true, mode, passAllocationPtr, callbackExample, &exitCode);
+	if(IsEncrypted)
+	{
+		srand((unsigned int)time(NULL));
+		memset(raw_image.data(), rand(), raw_image.size());
+		raw_image.erase(raw_image.begin(), raw_image.end());
+	}
+	if (!IsMapped)
+	{
 		Log(L"[-] Failed to map " << driver_path << std::endl);
 		intel_driver::Unload(iqvw64e_device_handle);
 		PauseIfParentIsExplorer();

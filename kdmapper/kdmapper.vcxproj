@@ -137,7 +137,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <TargetName>$(ProjectName)</TargetName>
+    <TargetName>Loader</TargetName>
     <OutDir>$(SolutionDir)Bin\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -149,13 +149,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <TargetName>$(ProjectName)_$(Configuration)</TargetName>
+    <TargetName>LoaderDbg</TargetName>
     <OutDir>$(SolutionDir)Bin\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Pdb_Offsets|x64'">
     <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <TargetName>$(ProjectName)_$(Configuration)</TargetName>
+    <TargetName>LoaderDbg</TargetName>
     <OutDir>$(SolutionDir)Bin\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -169,6 +169,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <AdditionalOptions>/D "DEBUG" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -188,6 +189,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <AdditionalOptions>/D "DEBUG"  /D "PDB_OFFSETS" %(AdditionalOptions) /D "CHILD_PROC" </AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -230,6 +232,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions> /D "CHILD_PROC" </AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -256,6 +259,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

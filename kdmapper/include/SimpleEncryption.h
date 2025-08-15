@@ -11,6 +11,14 @@
 typedef unsigned char bool;
 #endif
 
+#ifndef Print
+#ifndef DEBUG
+#define Print(...)
+#else
+#define Print(...) printf(__VA_ARGS__)
+#endif
+#endif
+
 #define RotateLeft(value, shift)  ((value << shift) | (value >> ((sizeof(value) * 8)- shift)))
 #define RotateRight(value, shift) ((value >> shift) | (value << ((sizeof(value) * 8)- shift)))
 

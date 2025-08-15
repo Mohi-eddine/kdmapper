@@ -16,6 +16,14 @@
 
 #include "DataStructs.hpp"
 
+#ifndef Print
+#ifndef DEBUG
+#define Print(...)
+#else
+#define Print(...) printf(__VA_ARGS__)
+#endif
+#endif
+
 ///////////////////////////////////
 //This macro is used to enable the use of the SymbolsHandler functions,if for any reasons you don't want to use PDB Offsets, you can still use the original method of sig scanning the kernel to get the target addresses
 ///*#####################*/
@@ -34,9 +42,9 @@
 
 #ifdef DEBUG
 #ifdef UNICODE
-#define SYM_OFFSETS_PATH	(PCWSTR)L"..\\Bin\\SymbolsOffset.txt"
+#define SYM_OFFSETS_PATH	(PCWSTR)L".\\SymbolsOffset.txt"
 #else
-#define SYM_OFFSETS_PATH	(PCSTR)"..\\Bin\\SymbolsOffset.txt"
+#define SYM_OFFSETS_PATH	(PCSTR)".\\SymbolsOffset.txt"
 #endif
 #else
 #ifdef UNICODE
@@ -47,7 +55,7 @@
 #endif
 
 #ifdef DEBUG
-#define SYM_FROM_PDB_EXE (PCSTR)"cd ..\\Bin\\ && SymbolsFromPDB_Debug_Pdb_Offsets.exe"
+#define SYM_FROM_PDB_EXE (PCSTR)"SymbolsFromPDBDbg.exe"
 #else
 #define SYM_FROM_PDB_EXE (PCSTR)"SymbolsFromPDB.exe"
 #endif

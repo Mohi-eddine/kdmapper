@@ -215,7 +215,7 @@ bool EncryptBytes( uint8_t* Bytes, size_t BytesCount, __m128i Key[2])
 	
 	if (BytesCount % 32)
 	{
-		printf("Error: Buffer Bytes are not aligned to 256 bits (32 bytes).\n");
+		Print("Error: Buffer Bytes are not aligned to 256 bits (32 bytes).\n");
 		return FALSE;
 	}
 
@@ -373,7 +373,7 @@ bool DecryptBytes(uint8_t* Bytes, size_t BytesCount, __m128i Key[2])
 
 	if (BytesCount % 32)
 	{
-		printf("Error: Buffer Bytes are not aligned to 256 bits (32 bytes).\n");
+		Print("Error: Buffer Bytes are not aligned to 256 bits (32 bytes).\n");
 		return FALSE;
 	}
 

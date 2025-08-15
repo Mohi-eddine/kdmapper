@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#if defined(DISABLE_OUTPUT)
+#ifndef DEBUG
 #define Log(content) 
 #define Print(...)
 #else

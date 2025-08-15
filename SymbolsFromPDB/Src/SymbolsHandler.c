@@ -54,7 +54,7 @@ BOOL InitSymServer(IN PCWCHAR StoragePath)
 		Result = SymInitializeW(CURRENT_PROCESS, _SearchPath, FALSE);
 		if (!Result)
 		{
-			printf("[-] Failed to init symbols server. Error: %u\n", GetLastError());
+			Print("[-] Failed to init symbols server. Error: %u\n", GetLastError());
 			__leave;
 		}
 		SymSetOptions(SYMOPT_EXACT_SYMBOLS | SYMOPT_DEBUG);
@@ -90,7 +90,7 @@ BOOL GetPdbFile(IN PCWCHAR TargetBinPath, OUT PWSTR OutPdbFilePath)
 	BOOL Result = SymSrvGetFileIndexInfoW(TargetBinPath, &Info, 0);
 	if (!Result)
 	{
-		printf("[-] Failed to find binary info. Error: %u\n", GetLastError());
+		Print("[-] Failed to find binary info. Error: %u\n", GetLastError());
 		return FALSE;
 	}
 
@@ -129,20 +129,20 @@ BOOLEAN CheckSymServerDlls()
 	TCHAR DirBuff[MAX_PATH];
 	if (!GetCurrentDirectory(_countof(DirBuff), DirBuff))
 	{
-		printf("[-] Error: Invalid Directory.\n");
+		Print("[-] Error: Invalid Directory.\n");
 		return FALSE;
 	}
 	HANDLE hFile = CreateFileW(L"dbghelp.dll", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (!hFile || hFile == INVALID_HANDLE_VALUE)
 	{
-		printf("[-] Error: %ls is not found in (%ls).\n", DBGHELP_DLL_PATH, DirBuff);
+		Print("[-] Error: %ls is not found in (%ls).\n", DBGHELP_DLL_PATH, DirBuff);
 		return FALSE;
 	}
 	CloseHandle(hFile);
 	hFile = CreateFileW(SYMSRV_DLL_PATH, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (!hFile || hFile == INVALID_HANDLE_VALUE)
 	{
-		printf("[-] Error: %ls is not found in (%ls).\n", SYMSRV_DLL_PATH, DirBuff);
+		Print("[-] Error: %ls is not found in (%ls).\n", SYMSRV_DLL_PATH, DirBuff);
 		return FALSE;
 	}
 	CloseHandle(hFile);
@@ -158,13 +158,13 @@ BOOLEAN GenerateOffsetFile()
 
 	if (!SetSymbolsPath())
 	{
-		printf("[-] Failed To Set The Symbols Path.\n");
+		Print("[-] Failed To Set The Symbols Path.\n");
 		return FALSE;
 	}
 
 	if (!InitSymServer(SymbolsPath))
 	{
-		printf("[-] Failed To Init Symbols Server.\n");
+		Print("[-] Failed To Init Symbols Server.\n");
 		return FALSE;
 	}
 
@@ -198,16 +198,16 @@ BOOLEAN GenerateOffsetFile()
 	TCHAR PdbFilePath[MAX_PATH + 1] = { 0 };
 	for(int FunctionsInfoIdx = 0 ; FunctionsInfoIdx < Elements_Count(SymsData, SYMBOLS_DATA) ;++FunctionsInfoIdx)
 	{
-		printf("\n");
+		Print("\n");
 		if (!GetPdbFile(SymsData[FunctionsInfoIdx].FileName, PdbFilePath))
 		{
-			printf("Error: Failed To Get PDB File For: %ls.\n", SymsData[FunctionsInfoIdx].FileName);
+			Print("Error: Failed To Get PDB File For: %ls.\n", SymsData[FunctionsInfoIdx].FileName);
 			SymbolCleanup();
 			return FALSE;
 		}
 		if (!InitKernelSymbolsList(PdbFilePath, &SymsData[FunctionsInfoIdx].SymbolsInfoArray))
 		{
-			printf("Error: Failed To Get One Or More Function Offset.\n");
+			Print("Error: Failed To Get One Or More Function Offset.\n");
 			SymbolCleanup();
 			return FALSE;
 		}
@@ -219,7 +219,7 @@ BOOLEAN GenerateOffsetFile()
 
 	if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE)
 	{
-		printf("Error: Failed To Create Symbols Offset FileHandle: %u.\n",GetLastError());
+		Print("Error: Failed To Create Symbols Offset FileHandle: %u.\n",GetLastError());
 		return FALSE;
 	}
 
@@ -244,14 +244,14 @@ BOOLEAN GenerateOffsetFile()
 
 	if (!BufferSize)
 	{
-		printf("Error: Failed To Get FileHandle Buffer Size.\n");
+		Print("Error: Failed To Get FileHandle Buffer Size.\n");
 		goto FailExit;
 	}
 
 	Buffer = malloc(BufferSize);
 	if (!Buffer)
 	{
-		printf("Error: Failed To Allocate Memory For FileHandle Buffer.\n");
+		Print("Error: Failed To Allocate Memory For FileHandle Buffer.\n");
 		goto FailExit;
 	}
 	
@@ -286,7 +286,7 @@ BOOLEAN GenerateOffsetFile()
 
 	if (!IsWritten)
 	{
-		printf("Error: Failed To Write To Symbols Offset FileHandle.\n");
+		Print("Error: Failed To Write To Symbols Offset FileHandle.\n");
 		return FALSE;
 	}
 	return TRUE;
@@ -315,14 +315,14 @@ BOOLEAN InitKernelSymbolsList(
 
 		if (!GetFileParams(pFileName, &BaseAddr, &FileSize))
 		{
-			printf(("Error: Cannot obtain file parameters (internal error).\n"));
+			Print(("Error: Cannot obtain file parameters (internal error).\n"));
 			Result = FALSE;
 			break;
 		}
 
 		// Load symbols for the module 
 #ifdef UNICODE
-		printf("-> Loading Symbols From %ls ... \n", pFileName);
+		Print("-> Loading Symbols From %ls ... \n", pFileName);
 		DWORD64 ModBase = SymLoadModuleExW(
 			GetCurrentProcess(), // Process handle of the current process 
 			NULL,                // Handle to the module's image file (not needed)
@@ -334,7 +334,7 @@ BOOLEAN InitKernelSymbolsList(
 			0
 		);
 #else
-		printf("-> Loading Symbols From %s ... \n",pFileName);
+		Print("-> Loading Symbols From %s ... \n",pFileName);
 		DWORD64 ModBase = SymLoadModule64(
 			GetCurrentProcess(), // Process handle of the current process 
 			NULL,                // Handle to the module's image file (not needed)
@@ -346,13 +346,13 @@ BOOLEAN InitKernelSymbolsList(
 #endif		
 		if (ModBase == 0)
 		{
-			printf("Error: SymLoadModule64() failed. Error code: %u \n", GetLastError());
+			Print("Error: SymLoadModule64() failed. Error code: %u \n", GetLastError());
 			Result = FALSE;
 			break;
 		}
 
 #ifndef NDEBUG
-		printf("Load address: %I64x \n", ModBase);
+		Print("Load address: %I64x \n", ModBase);
 #endif
 		// Obtain and display information about loaded symbols 
 #ifndef NDEBUG
@@ -374,7 +374,7 @@ BOOLEAN InitKernelSymbolsList(
 
 			if (!bRet || !SymInfoPackage.si.Address)
 			{
-				printf("Error: SymFromName() failed. Sym: %s || Error code: %u \n", pSymbolsArray->SymbolsArray[i].SymbolName, GetLastError());
+				Print("Error: SymFromName() failed. Sym: %s || Error code: %u \n", pSymbolsArray->SymbolsArray[i].SymbolName, GetLastError());
 				Result = FALSE;
 			}
 			else
@@ -382,14 +382,14 @@ BOOLEAN InitKernelSymbolsList(
 				// Display information about the symbol 
 				pSymbolsArray->SymbolsArray[i].SymbolOffset = (DWORD)(SymInfoPackage.si.Address - ModBase);
 				pSymbolsArray->SymbolsArray[i].NameLen = SymInfoPackage.si.NameLen;
-				printf("Symbol %s Offset: %X\n", SymName, pSymbolsArray->SymbolsArray[i].SymbolOffset);
+				Print("Symbol %s Offset: %X\n", SymName, pSymbolsArray->SymbolsArray[i].SymbolOffset);
 			}
 		}
 		// Unload symbols for the module 
 		bRet = SymUnloadModule64(GetCurrentProcess(), ModBase);
 		if (!bRet)
 		{
-			printf("Error: Unload Symbols failed. Error code: %u \n", GetLastError());
+			Print("Error: Unload Symbols failed. Error code: %u \n", GetLastError());
 		}
 	} while (0);
 
@@ -466,7 +466,7 @@ BOOLEAN _GetFileSize(
 
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		printf("CreateFile() failed. Error: %u \n", GetLastError());
+		Print("CreateFile() failed. Error: %u \n", GetLastError());
 		return FALSE;
 	}
 
@@ -474,14 +474,14 @@ BOOLEAN _GetFileSize(
 	*FileSize = GetFileSize(hFile, NULL);
 	if (*FileSize == INVALID_FILE_SIZE)
 	{
-		printf("GetFileSize() failed. Error: %u \n", GetLastError());
+		Print("GetFileSize() failed. Error: %u \n", GetLastError());
 		// and continue ... 
 	}
 
 	// Close the file 
 	if (!CloseHandle(hFile))
 	{
-		printf("CloseHandle() failed. Error: %u \n", GetLastError());
+		Print("CloseHandle() failed. Error: %u \n", GetLastError());
 		// and continue ... 
 	}
 	// Complete 
@@ -502,7 +502,7 @@ void ShowSymbolInfo(
 	BOOL bRet = SymGetModuleInfo64(GetCurrentProcess(), ModBase, &ModuleInfo);
 	if (!bRet)
 	{
-		printf("Error: SymGetModuleInfo64() failed. Error code: %u \n", GetLastError());
+		Print("Error: SymGetModuleInfo64() failed. Error code: %u \n", GetLastError());
 		return;
 	}
 
@@ -511,62 +511,62 @@ void ShowSymbolInfo(
 	switch (ModuleInfo.SymType)
 	{
 	case SymNone:
-		printf("No symbols available for the module.\n");
+		Print("No symbols available for the module.\n");
 		break;
 
 	case SymExport:
-		printf("Loaded symbols: Exports\n");
+		Print("Loaded symbols: Exports\n");
 		break;
 
 	case SymCoff:
-		printf("Loaded symbols: COFF\n");
+		Print("Loaded symbols: COFF\n");
 		break;
 
 	case SymCv:
-		printf("Loaded symbols: CodeView\n");
+		Print("Loaded symbols: CodeView\n");
 		break;
 
 	case SymSym:
-		printf("Loaded symbols: SYM\n");
+		Print("Loaded symbols: SYM\n");
 		break;
 
 	case SymVirtual:
-		printf("Loaded symbols: Virtual\n");
+		Print("Loaded symbols: Virtual\n");
 		break;
 
 	case SymPdb:
-		printf("Loaded symbols: PDB\n");
+		Print("Loaded symbols: PDB\n");
 		break;
 
 	case SymDia:
-		printf("Loaded symbols: DIA\n");
+		Print("Loaded symbols: DIA\n");
 		break;
 
 	case SymDeferred:
-		printf("Loaded symbols : Deferred\n"); // not actually loaded 
+		Print("Loaded symbols : Deferred\n"); // not actually loaded 
 		break;
 
 	default:
-		printf("Loaded symbols: Unknown format.\n");
+		Print("Loaded symbols: Unknown format.\n");
 		break;
 	}
 
 	// Image name 
 	if (strlen(ModuleInfo.ImageName) > 0)
 	{
-		printf("Image name: %s \n", ModuleInfo.ImageName);
+		Print("Image name: %s \n", ModuleInfo.ImageName);
 	}
 
 	// Loaded image name 
 	if (strlen(ModuleInfo.LoadedImageName) > 0)
 	{
-		printf("Loaded image name: %s \n", ModuleInfo.LoadedImageName);
+		Print("Loaded image name: %s \n", ModuleInfo.LoadedImageName);
 	}
 
 	// Loaded PDB name 
 	if (strlen(ModuleInfo.LoadedPdbName) > 0)
 	{
-		printf("PDB file name: %s \n", ModuleInfo.LoadedPdbName);
+		Print("PDB file name: %s \n", ModuleInfo.LoadedPdbName);
 	}
 
 	// Is debug information unmatched ? 
@@ -574,24 +574,24 @@ void ShowSymbolInfo(
 	// in a separate file (.DBG or .PDB) 
 	if (ModuleInfo.PdbUnmatched || ModuleInfo.DbgUnmatched)
 	{
-		printf("Warning: Unmatched symbols. \n");
+		Print("Warning: Unmatched symbols. \n");
 	}
 
 	// Contents 
 
 	// Line numbers available ? 
-	printf("Line numbers: %s \n", ModuleInfo.LineNumbers ? "Available" : "Not available");
+	Print("Line numbers: %s \n", ModuleInfo.LineNumbers ? "Available" : "Not available");
 
 	// Global symbols available ? 
-	printf("Global symbols: %s \n", ModuleInfo.GlobalSymbols ? "Available" : "Not available");
+	Print("Global symbols: %s \n", ModuleInfo.GlobalSymbols ? "Available" : "Not available");
 
 	// Type information available ? 
-	printf("Type information: %s \n", ModuleInfo.TypeInfo ? "Available" : "Not available");
+	Print("Type information: %s \n", ModuleInfo.TypeInfo ? "Available" : "Not available");
 
 	// Source indexing available ? 
-	printf("Source indexing: %s \n", ModuleInfo.SourceIndexed ? "Yes" : "No");
+	Print("Source indexing: %s \n", ModuleInfo.SourceIndexed ? "Yes" : "No");
 
 	// Public symbols available ? 
-	printf("Public symbols: %s \n", ModuleInfo.Publics ? "Available" : "Not available");
+	Print("Public symbols: %s \n", ModuleInfo.Publics ? "Available" : "Not available");
 }
 #endif
