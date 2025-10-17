@@ -46,7 +46,7 @@ bool ParentProcCreateShareMem(PHANDLE phMapFile, PPROC_COMM_DATA* pSharedMemory)
     return true;
 }
 
-bool ParentProcCommStart(const TCHAR* ChildProc, TCHAR* Cmd, const TCHAR* ChildProcCurrentDir, PHANDLE hChildProc, PHANDLE hChildProcThread)
+bool ParentProcCommStart(const TCHAR* ChildProc, TCHAR* Cmd, const TCHAR* ChildProcCurrentDir,PHANDLE hChildProc,PHANDLE hChildProcThread)
 {
     if (!hChildProc || !hChildProcThread)
         return false;
@@ -56,8 +56,13 @@ bool ParentProcCommStart(const TCHAR* ChildProc, TCHAR* Cmd, const TCHAR* ChildP
 
     // Step 4: Start the child process
     STARTUPINFO si = { sizeof(STARTUPINFO) };
+#ifndef NDEBUG 
+    si.wShowWindow = true;
+#else
+    si.wShowWindow = false;
+#endif
     PROCESS_INFORMATION pi;
-    if (!CreateProcess(
+    if (!CreateProcessW(
         ChildProc,           // Path to the child process executable
         Cmd,                 // Command-line arguments
         NULL,                // Process security attributes

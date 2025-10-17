@@ -265,13 +265,14 @@ int wmain(const int argc, wchar_t** argv) {
 		return -1;
 	}
 #endif
-
+	bool skipNtHeaders = false;
 	bool IsEncrypted = false;
 	bool IsChildProc = false;
 	
 	PPROC_COMM_DATA ProcData = NULL;
 	HANDLE hMapFile = NULL;
 	__m128i Key[2];
+	ENRTY_POINT_PARAMS Params = { 0 };
 	if (ChildProcCommStart(&hMapFile, &ProcData))
 	{
 		Print("[+] Started From Parent Proc\n");
@@ -286,9 +287,10 @@ int wmain(const int argc, wchar_t** argv) {
 			memcpy(&PublicKey.mod, &ProcData->PublicKey.mod, sizeof(gint));
 			memcpy(&PublicKey.exp, &ProcData->PublicKey.exp, sizeof(gint));
 		}
-
+		skipNtHeaders = ProcData->SkipNtHeaders;
+		memcpy(&Params, &ProcData->EntryPointParams, sizeof(Params));
 		gint DecryptedData;
-		rsa_decrypt_single(&PublicKey, ProcData->Data, DecryptedData);
+		rsa_decrypt_single(&PublicKey, ProcData->FileDecryptionKey, DecryptedData);
 		ChildProcCommEnd(hMapFile, ProcData);
 		if (ggint_is_zero(DecryptedData))
 		{
@@ -356,7 +358,11 @@ int wmain(const int argc, wchar_t** argv) {
 
 	bool free = paramExists(argc, argv, L"free") >= 0;
 	bool indPagesMode = paramExists(argc, argv, L"indPages") >= 0;
-	bool passAllocationPtr = paramExists(argc, argv, L"PassAllocationPtr") >= 0;
+
+	if(!IsChildProc)
+	{
+		skipNtHeaders = paramExists(argc, argv, L"skipnt") >= 0;
+	}
 
 	if (free) {
 		Log(L"[+] Free pool memory after usage enabled" << std::endl);
@@ -370,10 +376,6 @@ int wmain(const int argc, wchar_t** argv) {
 		Log(L"[-] Can't use --free and --indPages at the same time" << std::endl);
 		help();
 		return -1;
-	}
-
-	if (passAllocationPtr) {
-		Log(L"[+] Pass Allocation Ptr as first param enabled" << std::endl);
 	}
 
 	int drvIndex = -1;
@@ -458,7 +460,7 @@ int wmain(const int argc, wchar_t** argv) {
 	}
 
 	NTSTATUS exitCode = 0;
-	bool IsMapped = kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), 0, (ULONG64)DriverName, free, true, mode, passAllocationPtr, callbackExample, &exitCode);
+	bool IsMapped = kdmapper::MapDriver(iqvw64e_device_handle, raw_image.data(), &Params, (ULONG64)DriverName, free, skipNtHeaders, mode, callbackExample, &exitCode);
 	if(IsEncrypted)
 	{
 		srand((unsigned int)time(NULL));

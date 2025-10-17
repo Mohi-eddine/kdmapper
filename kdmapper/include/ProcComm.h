@@ -1,26 +1,30 @@
 #pragma once
 
 #include <windows.h>
-#include "include/Prime/RSA.h"
+#include "Prime/RSA.h"
+
+/*User Includes*/
 
 #define SHARED_MEMORY_NAME L"Global\\CommMem"
 
-#ifndef Print
-#ifndef DEBUG
-#define Print(...)
-#else
-#define Print(...) printf(__VA_ARGS__)
-#endif
-#endif
+/*User Structs*/
+///*TheGapOfRohan Mapper*/
+typedef struct _PE_ENTRY_PARAMS
+{
+    ULONG64 Params[5];
+}PE_ENTRY_PARAMS, * PPE_ENTRY_PARAMS;
 
-
+/*this struct can be modified as needed*/
 typedef struct _PROC_COMM_DATA
 {
     RSA_KEY PublicKey;
-    gint Data;
-   /* int ExitCode;
-    BOOLEAN IsChildDone;*/
-}PROC_COMM_DATA , *PPROC_COMM_DATA;
+    gint FileDecryptionKey;
+    PE_ENTRY_PARAMS EntryPointParams;//don't attempt to access pointers on this array from a child proc
+    WCHAR FileExtension[5];
+    BOOLEAN IsEncrypted;//this is related to the RSA_KEY and the FileDecryptionKey
+    BOOLEAN SkipNtHeaders;
+    /* you can specify more here*/
+}PROC_COMM_DATA, * PPROC_COMM_DATA;
 
 #define SHARED_MEMORY_SIZE (sizeof(PROC_COMM_DATA))
 //extern RSA_KEY PublicKey;

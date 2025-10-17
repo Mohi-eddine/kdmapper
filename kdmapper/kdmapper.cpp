@@ -92,7 +92,7 @@ bool ResolveImports(HANDLE iqvw64e_device_handle, portable_executable::vec_impor
 	return true;
 }
 
-uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 param1, ULONG64 param2, bool free, bool destroyHeader, AllocationMode mode, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
+uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, PENRTY_POINT_PARAMS EntryParams, ULONG64 param2, bool free, bool destroyHeader, AllocationMode mode, mapCallback callback, NTSTATUS* exitCode) {
 
 	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(data);
 
@@ -117,7 +117,7 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 p
 
 	uint64_t kernel_image_base = 0;
 	if (mode == AllocationMode::AllocateIndependentPages) {
-		kernel_image_base = intel_driver::MmAllocateIndependentPagesEx(iqvw64e_device_handle, image_size);;
+		kernel_image_base = intel_driver::MmAllocateIndependentPagesEx(iqvw64e_device_handle, image_size);
 	}
 	else { // AllocatePool by default
 		kernel_image_base = intel_driver::AllocatePool(iqvw64e_device_handle, nt::POOL_TYPE::NonPagedPool, image_size);
@@ -236,15 +236,36 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 p
 		Log(L"[<] Calling DriverEntry 0x" << reinterpret_cast<void*>(address_of_entry_point) << std::endl);
 
 		if (callback) {
-			if (!callback(&param1, &param2, realBase, image_size)) {
+			if (!callback((uintptr_t*)&EntryParams, &param2, realBase, image_size)) {
 				Log(L"[-] Callback returns false, failed!" << std::endl);
 				kernel_image_base = realBase;
 				break;
 			}
 		}
 
+		PE_INFO PeInfo = {
+				.ImageBase = (PBYTE)realBase,
+				.ImageSize = image_size,
+				.IsNtHeadersSkipped = destroyHeader
+		};
+
+		ASM_IO_INVOKE_SUB_CONTEXT SubContext = {
+				.Irql = PASSIVE_LEVEL,
+				.InvokedFunction = NULL,
+				.PeInfo = &PeInfo,
+		};
+
+		if (EntryParams)
+		{
+			memcpy(&SubContext.Params, EntryParams, sizeof(SubContext.Params));
+		}
+
+		ASM_IO_INVOKE_CONTEXT InBuffer = {
+			.SubContext = &SubContext
+		};
+
 		NTSTATUS status = 0;
-		if (!intel_driver::CallKernelFunction(iqvw64e_device_handle, &status, address_of_entry_point, (PassAllocationAddressAsFirstParam ? realBase : param1), param2)) {
+		if (!intel_driver::CallKernelFunction(iqvw64e_device_handle, &status, address_of_entry_point, &InBuffer, param2)) {
 			Log(L"[-] Failed to call driver entry" << std::endl);
 			kernel_image_base = realBase;
 			break;
@@ -275,8 +296,6 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle, BYTE* data, ULONG64 p
 				Log(L"[-] WARNING: Failed to free memory!" << std::endl);
 			}
 		}
-
-
 
 		VirtualFree(local_image_base, 0, MEM_RELEASE);
 		return realBase;
