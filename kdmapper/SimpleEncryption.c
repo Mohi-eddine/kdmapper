@@ -42,6 +42,12 @@ uint32_t KeyGenerator(wchar_t* Password, size_t PasswordSize, __m128i Key[2])
 	size_t Index = 0;
 	uint8_t* KeyPtr = (uint8_t*)Key;
 	size_t KeyElementsCount = sizeof(__m128i) * 2;
+	
+	for (size_t i = 0; i < PasswordSize; i++)
+	{
+		Crc32 = _mm_crc32_u16(Crc32, Password[i]);
+	}
+
 	uint32_t Temp = 0;
 	do
 	{

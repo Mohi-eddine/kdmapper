@@ -431,7 +431,7 @@ int wmain(const int argc, wchar_t** argv) {
 		{
 			Print("[-] Error: Decryption failed due to file integrity check failure.\n");
 			PauseIfParentIsExplorer();
-			return 2;
+			return -2;
 		}
 
 		size_t FileSize = *(size_t*)(Buffer + (AlignedFileSize + sizeof(FileSha256Hash[0])));
@@ -439,7 +439,7 @@ int wmain(const int argc, wchar_t** argv) {
 		{
 			Print("[-] Error: File size is larger than expected.\n");
 			PauseIfParentIsExplorer();
-			return 3;
+			return -3;
 		}
 		
 		raw_image.resize(FileSize);
